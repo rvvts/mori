@@ -1,5 +1,5 @@
 use markdown as md;
-use std::fs;
+use std::{fs, fmt::format};
 use mlua::Lua;
 use fs_extra;
 use std::path::Path;
@@ -46,7 +46,10 @@ fn md_to_html(config: &md::Options, markdown_text: &String) -> Result<String, St
 }
 
 /// Given the text of a file, finds and evaluates lua macros. Returns the modified text of the file.
-fn evaluate_macros(lua: &Lua, text: &str) -> String {
+fn evaluate_macros<'a, F>(text: &'a str, callback: F) -> String
+where
+    F: Fn(&'a str) -> String
+{
     let mut result = String::from(text);
 
     let mut macro_start_idx: usize;
@@ -66,18 +69,37 @@ fn evaluate_macros(lua: &Lua, text: &str) -> String {
         let macro_text = &text[macro_start_idx..macro_end_idx+2];     // the macro itself, including {{ }}
         let macro_contents = &text[macro_start_idx+2..macro_end_idx]; // the text inside the macro
 
-        let output = match lua.load(macro_contents).eval::<String>() {
-            Ok(x) => x,
-            Err(x) => {
-                println!("ERROR: At line {} when executing {macro_text}", get_line_number(text, macro_start_idx)); // every error is O(n), so overall this could be O(n^2)!
-                println!("\t{x}");
-                String::from(macro_text)
-            }
-        };
+        let output = callback(macro_contents);
         result = result.replacen(macro_text, &output, 1);
     }
     
     return result;
+}
+
+fn evaluate_lua_macro(code: &str, lua: &Lua) -> String {
+    match lua.load(code).eval::<String>() {
+        Ok(x) => x,
+        Err(x) => {
+            println!("ERROR: When executing {code}");
+            println!("\t{x}");
+            format!("{{{{{code}}}}}")
+        }
+    }
+}
+
+fn evaluate_generator_macro(code: &str, md_file: &Path) -> String {
+    let generator = code.trim();
+
+    let p = md_file.to_str()
+        .expect("Path contains invalid unicode!");
+    if generator == "markdown content" {
+        return format!("{{{{ return md_to_html(\"{p}\") }}}}");
+    } else if generator.starts_with("markdown ") {
+        let field = &generator[8..];
+        return format!("{{{{ return get_field(\"{p}\", \"{field}\") }}}}")
+    }
+
+    format!("{{{{{code}}}}}")
 }
 
 fn init_lua(lua: &Lua) {
@@ -132,11 +154,6 @@ fn template_md(md_path: &Path, template_path: &Path) {
         .expect("Failed to create template copy.");
 }
 
-/// expands code-generating macros
-fn generate_code(path: &Path) {
-    
-}
-
 fn main() {
     let lua = Lua::new();
     init_lua(&lua);
@@ -144,7 +161,8 @@ fn main() {
     let html_filepath = String::from("template.html");
     let html_file_text = fs::read_to_string(html_filepath)
         .expect("Could not open html file.");
-    let result = evaluate_macros(&lua, &html_file_text);
+    let result = evaluate_macros(&html_file_text, |x| evaluate_generator_macro(x, Path::new("mori.md")));
+    let result = evaluate_macros(&result, |x| evaluate_lua_macro(x, &lua));
     println!("{result}");
 
     // let source_dir = Path::new("put a valid path here");
