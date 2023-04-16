@@ -1,0 +1,41 @@
+template = "template.html"
+title = "Using TOML for Static Site Generation"
+author = "dawn"
+date = 2023-04-07
+
+summary = '''
+Many static site generators use markdown files directly. But this is limiting in several ways:
+- custom data requires frontmatter.
+- Limited to 1 body of text per file.
+
+But what if we could use toml instead?
+'''
+
+content = '''
+# {{ .title }}
+*{{ .author }}*
+
+Many static site generators use markdown files directly. But this is limiting in several ways:
+- Custom data requires frontmatter.
+- Limited to 1 body of text per file.
+
+But what if we could use toml instead? This fixes the problems above and brings many other benefits:
+- Custom data is its nature.
+- No limits on data.
+- toml is an explicitly specified format, unlike frontmatter.
+- Fields can be typed.
+- toml supports multiline strings without any weird indentation!
+
+But it introduces new downsides:
+- Incompatible with markdown editors.
+- Unconventional.
+
+I think both downsides are negligable. First, you don't need an editor for markdown. That's the whole point of markdown - it's slightly-more-readable plaintext! The only real downside is that you won't be able to preview mathjax/katex.
+
+## Further exploiting toml
+If we use markdown-in-toml instead of yaml-in-markdown (frontmatter), we can generalize our static site generator to other use cases. Maybe you don't want to use markdown, you just want to visualize data on a web page. Perfect! Store your data in toml files, and write a single template html file to bring them to life.
+
+Also, you can do some funky stuff like this: {{ markdown includeme }}.
+'''
+
+includeme = "Hello, world!"
