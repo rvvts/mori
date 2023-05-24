@@ -2,7 +2,7 @@ use markdown as md;
 use std::{fs, fmt::format};
 use mlua::Lua;
 use fs_extra;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Given the index of a character, finds the line number.
 /// O(n).
@@ -142,7 +142,7 @@ fn init_build_directory(source_dir: &Path, build_dir: &Path) {
 }
 
 /// creates a template file for the markdown file
-fn template_md(md_path: &Path, template_path: &Path) {
+fn template_md<'a>(md_path: &'a Path, template_path: &Path) -> PathBuf {
     let md_name = md_path.file_stem()
         .expect("Could not get file name of markdown file.");
     let mut html_name = std::ffi::OsString::from(md_name);
@@ -150,37 +150,47 @@ fn template_md(md_path: &Path, template_path: &Path) {
     let html_path = md_path.with_file_name(&html_name);
     
     // create the html file
-    fs::copy(template_path, html_path)
+    fs::copy(template_path, &html_path)
         .expect("Failed to create template copy.");
+
+    return html_path
 }
 
 fn main() {
     let lua = Lua::new();
     init_lua(&lua);
 
-    let html_filepath = String::from("template.html");
-    let html_file_text = fs::read_to_string(html_filepath)
-        .expect("Could not open html file.");
-    let result = evaluate_macros(&html_file_text, |x| evaluate_generator_macro(x, Path::new("mori.md")));
-    let result = evaluate_macros(&result, |x| evaluate_lua_macro(x, &lua));
-    println!("{result}");
+    // let html_filepath = String::from("template.html");
+    // let html_file_text = fs::read_to_string(html_filepath)
+    //     .expect("Could not open html file.");
+    // let result = evaluate_macros(&html_file_text, |x| evaluate_generator_macro(x, Path::new("mori.md")));
+    // let result = evaluate_macros(&result, |x| evaluate_lua_macro(x, &lua));
+    // println!("{result}");
 
-    // let source_dir = Path::new("put a valid path here");
-    // let build_dir = Path::new("put another valid path here");    
+    let source_dir = Path::new("put a path here");
+    let build_dir = Path::new("put a path here");    
 
-    // clean_build_directory(build_dir);
-    // init_build_directory(source_dir, build_dir);
-    // assert!(build_dir.exists());
+    clean_build_directory(build_dir);
+    init_build_directory(source_dir, build_dir);
+    assert!(build_dir.exists());
 
-    // let items = fs_extra::dir::get_dir_content(build_dir)
-    //     .expect("Couldn't access build folder.");
-    // for file in items.files {
-    //     if !file.ends_with(".md") {
-    //         continue;
-    //     }
-    //     println!("Templating file {file}...");
-    //     let template_path = build_dir.join("templates").join("template.html");
-    //     assert!(template_path.exists());
-    //     template_md(Path::new(&file), template_path.as_path());
-    // }
+    let items = fs_extra::dir::get_dir_content(build_dir)
+        .expect("Couldn't access build folder.");
+    for file in items.files {
+        if !file.ends_with(".md") {
+            continue;
+        }
+        println!("Templating file {file}...");
+        let template_path = build_dir.join("templates").join("template.html");
+        assert!(template_path.exists());
+        let html_path = template_md(Path::new(&file), template_path.as_path());
+
+        println!("Executing lua in {}...", html_path.to_string_lossy());
+        let html_text = fs::read_to_string(&html_path)
+            .expect("Could not open html file.");
+        let result = evaluate_macros(&html_text, |x| evaluate_generator_macro(x, Path::new("mori.md")));
+        let result = evaluate_macros(&result, |x| evaluate_lua_macro(x, &lua));
+        fs::write(html_path, result)
+            .expect("Could not write to html file.");
+    }
 }
