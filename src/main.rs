@@ -3,6 +3,7 @@ use std::{fs, fmt::format};
 use mlua::Lua;
 use fs_extra;
 use std::path::{Path, PathBuf};
+use clap::{arg, Command};
 
 /// Given the index of a character, finds the line number.
 /// O(n).
@@ -157,6 +158,32 @@ fn template_md<'a>(md_path: &'a Path, template_path: &Path) -> PathBuf {
 }
 
 fn main() {
+    let matches = Command::new("mori")
+        .version("0.1.0")
+        .author("rvts <voiding.voided@gmail.com>")
+        .about("Static site generator.")
+        .arg(arg!(-q --quiet "Don't print any output or prompts")
+            .global(true)
+        )
+        .arg(arg!(-v --verbose "Print extra info")
+            .global(true)
+        )
+        .subcommand(Command::new("build")
+            .about("Builds a static site")
+            .arg(arg!(-b --build <DIRECTORY> "Set build folder")
+                .default_value("./build/")
+            )
+            .arg(arg!(-t --templates <DIRECTORY> "Set templates folder")
+                .default_value("./templates/")
+            )
+            .arg(arg!(-s --source <DIRECTORY> "Set source folder")
+                .default_value("./")
+            )
+            .arg(arg!(-T --"template-only" "Convert markdown to html, but don't evaluate macros"))
+            .arg(arg!(-E --"evaluate-macro" "Skip markdown to html conversion, only evaluate macros"))
+        )
+        .get_matches();
+
     let lua = Lua::new();
     init_lua(&lua);
 
