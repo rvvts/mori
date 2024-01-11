@@ -173,6 +173,9 @@ def build(sourcepath: Path, buildpath: Path) -> None:
     # convert markdown files to html files
     for p in filepaths:
         build_md_file(p, templatepath)
+
+    # delete the copied template file in the build folder
+    templatepath.unlink()
     
     # find all .html files
     filepaths = list(buildpath.glob('*.html'))
@@ -180,9 +183,6 @@ def build(sourcepath: Path, buildpath: Path) -> None:
         # find all other html files
         otherfiles = []
         for o in filepaths:
-            print(f'{o} != {templatepath}')
-            if o.samefile(templatepath):
-                continue
             otherfiles.append(o)
 
         # apply macros in html files
