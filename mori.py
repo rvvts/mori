@@ -120,8 +120,6 @@ def build(sourcepath: Path, buildpath: Path) -> None:
         # find all other html files
         otherfiles = []
         for o in filepaths:
-            if o == p:
-                continue
             if o.samefile(templatepath):
                 continue
             otherfiles.append(o)
