@@ -9,6 +9,28 @@ def bail(code: int, msg: str):
     print('mori: ' + msg, file=sys.stderr)
     sys.exit(code)
 
+class Macro:
+    def __init__(self) -> None:
+        self.macro = '' # the entire macro, including {{ and }}
+        self.contents = '' # the part inside the curly braces
+        self.startidx = 0 # index of start of macro (inclusive)
+        self.endidx = 0 # index of end of macro (exclusive)
+
+def find_macro(text: str, startidx: int) -> Macro:
+    r = re.compile(r'\{\{(.*?)\}\}') # lazy match (as opposed to greedy)
+    match = r.search(text, startidx)
+
+    if match is None:
+        return None
+    
+    m = Macro()
+    m.macro = match.group(0)
+    m.contents = match.group(1)
+    m.startidx = match.start(0)
+    m.endidx = match.end(0)
+
+    return m
+
 def build_md_file(filepath: Path, templatepath: Path) -> None:
     # create markdown parser
     # TODO: move this outside in a clean way
@@ -32,27 +54,27 @@ def build_md_file(filepath: Path, templatepath: Path) -> None:
 
     # find and replace any macros that match metadata keys
     i = 0
-    r = re.compile(r'\{\{(.*)\}\}')
     while True:
-        m = r.search(html, i)
+        m = find_macro(html, i)
         if m is None:
             break
-        macro = m.group(0) # entire thing is 0th group
-        macro_name = m.group(1) # what was inside the curly brackets
-
+    
         # check if name is a metadata key
-        if macro_name in metadata.keys():
-            macro_value = metadata[macro_name][0]
+        if m.contents in metadata.keys():
+            macro_value = metadata[m.contents][0]
 
             # replace macro with value
-            html = html.replace(macro, macro_value, 1)
+            html = html.replace(m.macro, macro_value, 1)
 
-        i = m.end(0) # set start index to end of match
+            i += len(macro_value)
+        
+        else:
+            i = m.endidx
 
     # write html file
     htmlpath = buildpath.joinpath(filepath.stem + '.html')
     htmlpath.write_text(html)
-    print(htmlpath)
+    return htmlpath
 
 def get_html_title(filepath: Path) -> str:
     title = ''
@@ -84,22 +106,23 @@ def build_html_file(filepath: Path, navpaths: list[Path]) -> None:
     
     # evaluate macros
     i = 0
-    r = re.compile(r'\{\{(.*)\}\}')
     while True:
-        m = r.search(html, i)
+        m = find_macro(html, i)
         if m is None:
             break
-        macro = m.group(0)
-        macro_name = m.group(1)
 
-        if macro_name == 'NAV':
+        macro_result = m.macro # default result is the macro itself
+
+        if m.contents == 'NAV':
             # generate nav html
-            navhtml = macro_nav(navpaths)
-            print(navhtml)
-            html = html.replace(macro, navhtml)
+            macro_result = macro_nav(navpaths)
+            html = html.replace(m.macro, macro_result)
 
-        i = m.end(0)
-    print(html)
+            i += len(macro_result)
+
+        else:
+            i = m.endidx
+
     filepath.write_text(html)
 
 def build(sourcepath: Path, buildpath: Path) -> None:
@@ -128,7 +151,6 @@ def build(sourcepath: Path, buildpath: Path) -> None:
         build_html_file(p, otherfiles)
 
 if __name__ == '__main__':
-
     # parse args
     sourcepath = None
     if len(sys.argv) < 3:
