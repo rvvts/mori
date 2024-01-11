@@ -39,7 +39,7 @@ if your markdown files contain a frontmatter entry like `title: Hello, world!`,
 you can use the macro `{{title}}` to get that value.
 
 if a macro is unkown (not found in the list above and not found in frontmatter),
-it will remain as-is.
+it will remain as-is, and mori will output a warning.
 
 capitalized macros (e.g. `{{CONTENT}}`) are reserved for mori.
 you *can* use them, but they may be overridden by mori's own behavior

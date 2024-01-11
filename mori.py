@@ -83,6 +83,7 @@ def build_md_file(filepath: Path, templatepath: Path) -> None:
             i += len(macro_value)
         
         else:
+            print('[warning] ' + str(templatepath) + ': unknown macro ' + m.macro + ' while processing ' + str(filepath))
             i = m.endidx
 
     # write html file
@@ -149,6 +150,7 @@ def build_html_file(filepath: Path, navpaths: list[Path]) -> None:
             i += len(macro_result)
 
         else:
+            print('[warning] ' + str(filepath) + ': unknown macro ' + m.macro)
             i = m.endidx
 
     filepath.write_text(html)
@@ -178,6 +180,7 @@ def build(sourcepath: Path, buildpath: Path) -> None:
         # find all other html files
         otherfiles = []
         for o in filepaths:
+            print(f'{o} != {templatepath}')
             if o.samefile(templatepath):
                 continue
             otherfiles.append(o)
