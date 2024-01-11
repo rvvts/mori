@@ -6,17 +6,23 @@ from markdown import Markdown
 import re
 
 def bail(code: int, msg: str):
+    """
+    Write a message to stderr and exit.
+    """
     print('mori: ' + msg, file=sys.stderr)
     sys.exit(code)
 
 class Macro:
     def __init__(self) -> None:
-        self.macro = '' # the entire macro, including {{ and }}
+        self.macro = ''    # the entire macro, including {{ and }}
         self.contents = '' # the part inside the curly braces
-        self.startidx = 0 # index of start of macro (inclusive)
-        self.endidx = 0 # index of end of macro (exclusive)
+        self.startidx = 0  # index of start of macro (inclusive)
+        self.endidx = 0    # index of end of macro (exclusive)
 
 def find_macro(text: str, startidx: int) -> Macro:
+    """
+    Finds the next macro in the text at or after the start index.
+    """
     r = re.compile(r'\{\{(.*?)\}\}') # lazy match (as opposed to greedy)
     match = r.search(text, startidx)
 
@@ -24,14 +30,22 @@ def find_macro(text: str, startidx: int) -> Macro:
         return None
     
     m = Macro()
-    m.macro = match.group(0)
-    m.contents = match.group(1)
-    m.startidx = match.start(0)
-    m.endidx = match.end(0)
+    m.macro = match.group(0)    # 0th match group is everything, including braces
+    m.contents = match.group(1) # 1st match group is everything inside the parenthesis
+    m.startidx = match.start(0) # start index of entire macro (inclusiv3)
+    m.endidx = match.end(0)     # end index of entire macro (exclusive)
 
     return m
 
 def build_md_file(filepath: Path, templatepath: Path) -> None:
+    """
+    Converts a markdown file into an html file using a template html file.
+    The new html file will be created next to the markdown file
+    and will have the same base filename.
+    Evaluates the following macros:
+    - {{CONTENT}}
+    - frontmatter data (e.g. {{title}})
+    """
     # create markdown parser
     # TODO: move this outside in a clean way
     mdparser = Markdown(extensions=['meta'])
@@ -77,6 +91,10 @@ def build_md_file(filepath: Path, templatepath: Path) -> None:
     return htmlpath
 
 def get_html_title(filepath: Path) -> str:
+    """
+    Gets the title of an html file.
+    Returns an empty string if it doesn't have one.
+    """
     title = ''
     with open(filepath) as f:
         html = f.read()
@@ -86,6 +104,9 @@ def get_html_title(filepath: Path) -> str:
     return title
 
 def macro_nav(navpaths: list[Path]) -> str:
+    """
+    Generates an html nav for a list of html file paths.
+    """
     navhtml = '<ul>\n'
     for p in navpaths:
         # get page name
@@ -99,6 +120,13 @@ def macro_nav(navpaths: list[Path]) -> str:
     return navhtml
 
 def build_html_file(filepath: Path, navpaths: list[Path]) -> None:
+    """
+    Evaluates macros in html files.
+    The files are modified in-place.
+
+    Evaluates the following macros:
+    - {{NAV}}
+    """
     # open html file
     html = ''
     with open(filepath) as f:
@@ -126,6 +154,13 @@ def build_html_file(filepath: Path, navpaths: list[Path]) -> None:
     filepath.write_text(html)
 
 def build(sourcepath: Path, buildpath: Path) -> None:
+    """
+    Builds all markdown and html files in the source directory
+    and writes the results to the build directory.
+
+    The build directory is not created if it doesn't already exist.
+    Files in the build directory will be updated if they already exist.
+    """
     # copy source directory to build directory
     copytree(sourcepath, buildpath, dirs_exist_ok=True)
 
