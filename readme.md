@@ -28,6 +28,7 @@ format: `{{macro text goes here}}`
 | macro | description |
 |-------|-------------|
 | `{{CONTENT}}` | when used in a template, expands to the contents of a markdown file |
+| `{{NAV}}` | generates an html unordered list with links to all html files in the same directory as the current file, in alphabetical order |
 
 if a macro isn't found in the list above,
 then mori searches for an entry with the same name

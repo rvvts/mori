@@ -179,6 +179,7 @@ def build(sourcepath: Path, buildpath: Path) -> None:
     
     # find all .html files
     filepaths = list(buildpath.glob('*.html'))
+    filepaths = sorted(filepaths, key=str) # sort alphabetically (needed for {{NAV}})
     for p in filepaths:
         # find all other html files
         otherfiles = []
